@@ -7,18 +7,22 @@ const app = express();
 
 const port = process.env.PORT
 
-app.use('/admin', adminAuth);
 
 app.get('/user' ,  userAuth , (req, res) => {
-   res.send('user hava access')
+    try {
+        res.send('user hava access')
+    } catch (error) {
+          res.status(500).send(error.message)
+    }
 })
 
-app.get('/admin/getdata', (req, res) => {
-    res.send("admin data access")
+app.get('/admin', adminAuth, (req, res) => {
+    try {
+        res.send("admin data access")
+    } catch (error) {
+        res.status(500).send(error.message) 
+    }
 })
 
-app.get('/admin/getdata', (req, res) => {
-    res.send("admin data access")
-})
 
 app.listen(port || 3000, () => console.log(`server listing on port ${port}`)); 
