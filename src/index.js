@@ -1,15 +1,15 @@
 const connectDb = require('./config/database.js')
-const express = require('express');
-const jwt = require('jsonwebtoken')
 require('dotenv').config({ path: './.env' });
+const express = require('express');
+const bcrypt = require('bcrypt')
+const jwt = require('jsonwebtoken')
 const { adminAuth, userAuth } = require('./middleware/auth-middleware');
 const userModel = require('./model/user.schema.js')
+const customeResponse = require('./utils/customeResponse.js')
 const app = express();
 app.use(express.json());
 
-
 const port = process.env.PORT
-
 
 app.post('/login', async (req, res) => {
     try {
@@ -18,7 +18,8 @@ app.post('/login', async (req, res) => {
         if (!user) {
             res.send('user is not exist please signup')
         } else {
-            if (user.password != password) {
+            const isValidPassword = await bcrypt.compare(password, user.password)
+            if (!isValidPassword) {
                 res.send('invalid credential')
             } else {
                 const token = jwt.sign({ data: user }, process.env.JWT_SECRET, { expiresIn: '1h' })
@@ -41,14 +42,16 @@ app.get('/getAllUser', userAuth, async (req, res) => {
 
 app.post('/signup', adminAuth, async (req, res) => {
     try {
-        const { email } = req.body
+        const { email, password } = req.body
         const isUserExist = await userModel.findOne({ email: email })
         if (!isUserExist) {
+            const encryptPassword = await bcrypt.hash(password, 10);
+            req.body.password = encryptPassword
             const userObj = new userModel(req.body)
             const user = await userObj.save()
             res.send(user)
         } else {
-            res.send({ data: isUserExist, msg: 'user alrady Exist' })
+            res.send(new customeResponse().errorResponse(false, 'user alrady Exist', isUserExist))
         }
     } catch (error) {
         res.send(error.message)
@@ -68,10 +71,10 @@ app.delete('/delete', async (req, res) => {
 app.put('/update', userAuth, async (req, res) => {
     try {
         const id = req.body._id
-        await userModel.findByIdAndUpdate(id, req.body)
-        res.send('user is updated successFully')
+        const doc = await userModel.findByIdAndUpdate(id, req.body, { returnDocument: 'after' })
+        res.json(new customeResponse({}, 'user is updated successFully').successResponse(true, 'user is updated successFully', doc))
     } catch (error) {
-        res.status(400).send('somethiung went wrong')
+        res.status(400).json(new customeResponse().errorResponse(false, error.message, {}))
     }
 })
 

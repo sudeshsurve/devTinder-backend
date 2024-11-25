@@ -25,7 +25,9 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  hobies: []
+  hobies: {
+    type: Array
+  }
 })
 
 const userModel = mongoose.model('User', userSchema);
